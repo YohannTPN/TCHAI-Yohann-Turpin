@@ -53,3 +53,19 @@ UPDATE "transaction" SET montant = 10.0 WHERE id = 1;
 ```
 Ce qui résulte en une désynchronisation entre le solde et le montant des transactions.
 
+## TCHAI v2
+### Fonction de Hachage
+
+**Choix :** SHA-256 (Secure Hash Algorithm 256 bits)
+
+**Justification :** Le SHA-256 est un algorithme de hachage cryptographique standard et largement reconnu. Il offre une excellente résistance aux collisions et aux attaques par préimage, ce qui garantit l'intégrité des données des transactions. La probabilité qu'une modification minime d'une transaction ne change pas son hash est considérée comme négligeable.
+
+**Méthode de Hachage :** Le hash est calculé sur la représentation JSON triée et encodée en UTF-8 du tuple de la transaction (P1, P2, t, a).
+
+### Curl
+
+Pour recalculer les hash, on utilise la commande :
+```bash
+curl -X GET http://127.0.0.1:5000/api/transactions/integrity
+```
+
