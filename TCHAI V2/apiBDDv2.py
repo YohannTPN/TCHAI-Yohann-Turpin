@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import json
 
@@ -23,7 +23,7 @@ class Client(db.Model):
         return f'<Client {self.nom} - Solde: {self.solde:.2f}>'
 
 class Transaction(db.Model):
-    """Représente une transaction (P1, P2, t, a)."""
+    """Représente une transaction (P1, P2, t, a, h)."""
     id = db.Column(db.Integer, primary_key=True)
     p1_nom = db.Column(db.String(80), nullable=False) # Émetteur
     p2_nom = db.Column(db.String(80), nullable=False) # Destinataire
@@ -66,8 +66,10 @@ with app.app_context():
     print("Base de données initialisée avec les clients par défaut.")
 
 
+TIMESTAMP_FORMAT_HASH = "%Y-%m-%dT%H:%M:%S.%f"
+
 # --- Fonctions Utilitaires & Routes API ---
-def calculer_hash_transaction(p1_nom, p2_nom, montant, timestamp):
+def calculer_hash_transaction(p1_nom, p2_nom, montant, timestamp_str):
     """
     Calcule le hash SHA-256 du tuple (P1, P2, t, a).
     """
@@ -75,7 +77,7 @@ def calculer_hash_transaction(p1_nom, p2_nom, montant, timestamp):
     transaction_data = {
         "P1": p1_nom,
         "P2": p2_nom,
-        "t": timestamp,
+        "t": timestamp_str,
         "a": montant
     }
     
@@ -119,11 +121,11 @@ def enregistrer_transaction():
         p1.solde -= amount
         p2.solde += amount
 
-        now = datetime.utcnow()
-        timestamp_str = now.isoformat()
-        transaction_hash = calculer_hash_transaction(p1_name, p2_name, amount, timestamp_str)
+        now = datetime.now(timezone.utc)
+        timestamp_hash_str = now.strftime(TIMESTAMP_FORMAT_HASH)
+        transaction_hash = calculer_hash_transaction(p1_name, p2_name, amount, timestamp_hash_str)
 
-        nouvelle_transaction = Transaction(p1_nom=p1_name, p2_nom=p2_name, montant=amount, hash=transaction_hash)
+        nouvelle_transaction = Transaction(p1_nom=p1_name, p2_nom=p2_name, montant=amount,timestamp=now, hash=transaction_hash)
         db.session.add(nouvelle_transaction)
 
         db.session.commit()
@@ -186,10 +188,10 @@ def verifier_integrite():
         p1 = t.p1_nom
         p2 = t.p2_nom
         montant = t.montant
-        timestamp_str = t.timestamp.isoformat() 
+        timestamp_hash_str = t.timestamp.strftime(TIMESTAMP_FORMAT_HASH)
         
         # Recalculer le hash
-        hash_recalcule = calculer_hash_transaction(p1, p2, montant, timestamp_str)
+        hash_recalcule = calculer_hash_transaction(p1, p2, montant, timestamp_hash_str)
         
         # Comparer avec le hash stocké
         if hash_recalcule != t.hash:
@@ -209,9 +211,9 @@ def verifier_integrite():
             })
 
     if toutes_integres:
-        return jsonify({"message": "Toutes les transactions sont intègres.", "integrite": True, "details": resultats_verification}), 200
+        return jsonify({"message": "Toutes les transactions sont integres.", "integrite": True, "details": resultats_verification}), 200
     else:
-        return jsonify({"message": "ALERTE! L'intégrité de la chaîne est compromise.", "integrite": False, "details": resultats_verification}), 409 # Conflict
+        return jsonify({"message": "ALERTE! L'integrité de la chaîne est compromise.", "integrite": False, "details": resultats_verification}), 409 # Conflict
 
 
 if __name__ == '__main__':

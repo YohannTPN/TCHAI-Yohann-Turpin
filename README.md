@@ -41,10 +41,10 @@ Pour connaître le solde d'un client :
 curl -X GET http://127.0.0.1:5000/api/clients/wallet/<nom>
 ```
 
-Concernant l'attaque :
+Concernant l'attaque par modification de transaction:
 On fait :
 ```bash
-sqlite3 tchai.db 
+sqlite3 tchai1.db 
 ```
 
 Puis pour l'attaque :
@@ -60,7 +60,7 @@ Ce qui résulte en une désynchronisation entre le solde et le montant des trans
 
 **Justification :** Le SHA-256 est un algorithme de hachage cryptographique standard et largement reconnu. Il offre une excellente résistance aux collisions et aux attaques par préimage, ce qui garantit l'intégrité des données des transactions. La probabilité qu'une modification minime d'une transaction ne change pas son hash est considérée comme négligeable.
 
-**Méthode de Hachage :** Le hash est calculé sur la représentation JSON triée et encodée en UTF-8 du tuple de la transaction (P1, P2, t, a).
+**Méthode de Hachage :** Le hash est calculé sur la représentation JSON triée et encodée en UTF-8 du tuple de la transaction (P1, P2, t, a, h).
 
 ### Curl
 
@@ -68,4 +68,31 @@ Pour recalculer les hash, on utilise la commande :
 ```bash
 curl -X GET http://127.0.0.1:5000/api/transactions/integrity
 ```
+
+Concernant l'attaque par modification de transaction:
+On fait :
+```bash
+sqlite3 tchai2.db 
+```
+
+Puis pour l'attaque :
+```bash
+UPDATE "transaction" SET montant = 10.0 WHERE id = 1;
+```
+
+Ce qui résulte en une intégrité compromise,réglant le problème rencontré avec TCHAI1.
+
+Concernant l'attaque par modification de transaction:
+On fait :
+```bash
+sqlite3 tchai2.db 
+```
+
+Puis pour l'attaque :
+```bash
+DELETE FROM "transaction" WHERE id = 1;
+```
+Ce qui par surprise, ne crée aucune erreur d'intégrité au sein de l'API.
+
+## TCHAI v3
 
